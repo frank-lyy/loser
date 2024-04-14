@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torchvision.models as models
 
 from scipy.signal import convolve2d as conv2d
 
@@ -33,5 +34,32 @@ class TDNLoss(nn.Module):
 
         return reconstruction_loss + gamme_rc * reflectance_consistency_loss + gamma_sm * illumination_smoothness_loss
 
-class TDNModel(nn.Module):
+class RetinexModel(nn.Module):
+    def __init__(self):
+        self.channels = 64
+        self.kernel_size = 3
 
+        self.feature_extraction = nn.Conv2d(4, self.channels, self.kernel_size * 3, padding=4, padding_mode='replicate')
+        self.convolutions = nn.Sequential(nn.Conv2d(self.channels, self.channels, self.kernel_size, padding=1, padding_mode='replicate'),
+                                          nn.ReLU(),
+                                          nn.Conv2d(self.channels, self.channels, self.kernel_size, padding=1, padding_mode='replicate'),
+                                          nn.ReLU(),
+                                          nn.Conv2d(self.channels, self.channels, self.kernel_size, padding=1, padding_mode='replicate'),
+                                          nn.ReLU(),
+                                          nn.Conv2d(self.channels, self.channels, self.kernel_size, padding=1, padding_mode='replicate'),
+                                          nn.ReLU())
+        self.reconstruction = nn.Conv2d(self.channels, 4, self.kernel_size, padding=1, padding_mode='replicate')
+        self.full = nn.Sequential(self.feature_extarction, self.convolutions, self.reconstruction)
+
+    def forward(self, inputs):
+        low_img, normal_img = inputs
+
+        low_out = self.full(low_img)
+        reflectance_low = torch.sigmoid(low_out[:, :3, :, :])
+        illumination_low = torch.sigmoid(low_out[:, 3:, :, :])
+
+        normal_out = self.full(normal_img)
+        reflectance_normal = torch.sigmoid(normal_out[:, :3, :, :])
+        illumination_normal = torch.sigmoid(normal_out[:, 3:, :, :])
+
+        return reflectance_low, illumination_low, reflectance_normal, illumination_normal 
