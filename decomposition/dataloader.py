@@ -1,5 +1,24 @@
+import os
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
+
+from torchvision.io import read_image
+
+class RetinexDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.transform = transform
+        self.img_list = [f for f in os.listdir(self.root_dir) if isfile(os.path.join(self.root_dir, f))]
+
+    def __len__(self):
+        return len(self.img_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_name = os.path.join(self.root_dir, self.img_list[idx])
 
 def load_png_image(file_path):
     """
@@ -34,11 +53,8 @@ def convert_to_hsv(image):
     
     return hsv_image
 
-
 if __name__ == "__main__":
     # Display the original and HSV images
-    import matplotlib.pyplot as plt
-
     # Example usage:
     directory_path = 'LOLdataset/our485/low/'
     image_filename = '27.png'

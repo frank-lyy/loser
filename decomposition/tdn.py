@@ -2,6 +2,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import copy
+
+from tqdm import tqdm
 
 from scipy.signal import convolve2d as conv2d
 
@@ -63,3 +66,57 @@ class RetinexModel(nn.Module):
         illumination_normal = torch.sigmoid(normal_out[:, 3:, :, :])
 
         return reflectance_low, illumination_low, reflectance_normal, illumination_normal 
+
+def train_model(device, model, dataloaders, criterion, optimizer, num_epochs, save_dir=None):
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch + 1, num_epochs))
+        print('-' * 10)
+
+        for phase in ['train', 'val']:
+            if phase == 'train':
+                model.train()
+            else:
+                model.eval()
+
+            running_loss = 0.0
+
+            # Iterate over data, using TQDM for progress tracking
+            for inputs, targets in tqdm(dataloaders[phase]):
+                inputs = inputs.to(device)
+                targets = targets.to(device)
+
+                optimizer.zero_grad()
+
+                with torch.set_grad_enabled(phase == 'train'):
+                    outputs = model(inputs)
+                    loss = criterion(outputs, targets)
+
+                    if phase == 'train':
+                        loss.backward()
+                        optimizer.step()
+                
+                running_loss += loss.item() * inputs.size(0)
+            
+            epoch_loss = running_loss / len(dataloaders[phase].dataset)
+            print('{} Loss: {:.4f}'.format(phase, epoch_loss))
+
+    # Save the model
+    if save_dir:
+        torch.save(model.state_dict(), os.path.join(save_dir, 'weights_last.pt'))
+
+    return model
+
+if __name__ == "main":
+    # Constants
+    n_epochs = 5
+    lr = 0.0001
+    batch_size = 16
+    shuffle_datasets = True
+    save_dir = "decomposition/simple_retinex_model"
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = RetinexModel()
+    optim = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = TDNLoss()
+
+    train_model(device, model, dataloaders, criterion, optimizer, n_epochs, save_dir)
