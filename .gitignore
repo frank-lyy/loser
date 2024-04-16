@@ -1,2 +1,5 @@
 # Frank's GitIgnores:
 /venv
+
+# Ivy's GitIgnores:
+**/.DS_Store
