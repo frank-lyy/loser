@@ -6,6 +6,7 @@ import torchvision.models as models
 import copy
 import cv2
 import torchmetrics
+import os
 
 from tqdm import tqdm
 from torchvision import transforms
@@ -14,12 +15,13 @@ from torchvision import transforms
 from dataloader import RetinexDataset
 
 class TDNLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, device='cpu'):
         super(TDNLoss, self).__init__()
         self.alpha_rec = 0.3
         self.gamma_rc = 0.1
         self.gamma_sm = 0.1
         self.c = 10 # TODO: have no idea what this is supposed to be
+        self.device = device
 
     def forward(self, inputs, targets):
         reflectance_low, illumination_low, reflectance_normal, illumination_normal = inputs
@@ -35,7 +37,9 @@ class TDNLoss(nn.Module):
 
         # Calculate image gradients
         kernel_x = torch.FloatTensor([[0, 0], [-1, 1]]).view((1, 1, 2, 2))
+        kernel_x = kernel_x.to(self.device)
         kernel_y = torch.transpose(kernel_x, 2, 3)
+        kernel_y = kernel_y.to(self.device)
 
         grad_image_low_x = torch.abs(F.conv2d(gray_image_low, kernel_x, stride=1, padding=1))
         grad_image_low_y = torch.abs(F.conv2d(gray_image_low, kernel_y, stride=1, padding=1))
@@ -55,7 +59,7 @@ class TDNLoss(nn.Module):
         reflectance_consistency_loss = F.l1_loss(reflectance_normal, reflectance_low)
         illumination_smoothness_loss = torch.mean(weight_image_low_x * grad_illumination_low_x + weight_image_low_y * grad_illumination_low_y + weight_image_normal_x * grad_illumination_normal_x + weight_image_normal_y * grad_illumination_normal_y)
 
-        print(reconstruction_loss, reflectance_consistency_loss, illumination_smoothness_loss)
+        # print(reconstruction_loss, reflectance_consistency_loss, illumination_smoothness_loss)
 
         return reconstruction_loss + self.gamma_rc * reflectance_consistency_loss + self.gamma_sm * illumination_smoothness_loss
 
@@ -139,8 +143,9 @@ if __name__ == "__main__":
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = RetinexModel()
+    model = model.to(device)
     optim = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = TDNLoss()
+    criterion = TDNLoss(device=device)
     transform = transforms.Compose([
         transforms.ToTensor(),
         # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))

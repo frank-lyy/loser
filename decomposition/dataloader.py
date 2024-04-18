@@ -21,7 +21,7 @@ class RetinexDataset(torch.utils.data.Dataset):
 
         img_low_name = os.path.join(self.low_dir, self.img_list[idx])
         img_high_name = os.path.join(self.high_dir, self.img_list[idx])
-        print(img_low_name, img_high_name)
+        # print(img_low_name, img_high_name)
 
         img_low = load_png_image(img_low_name)
         img_high = load_png_image(img_high_name)
