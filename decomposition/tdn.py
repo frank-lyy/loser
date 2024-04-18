@@ -55,7 +55,7 @@ class TDNLoss(nn.Module):
         weight_image_normal_y = torch.exp(-self.c * grad_image_normal_y)
 
         reconstruction_loss = F.l1_loss(reflectance_normal * illumination_normal_extended, image_normal) + self.alpha_rec * F.l1_loss(reflectance_low * illumination_low_extended, image_low) + F.l1_loss(reflectance_low * illumination_normal_extended, image_normal) + self.alpha_rec * F.l1_loss(reflectance_normal * illumination_low_extended, image_normal) 
-        reflectance_consistency_loss = F.l1_loss(reflectance_normal, reflectance_low)
+        reflectance_consistency_loss = F.l1_loss(reflectance_low, reflectance_normal.detach())
         illumination_smoothness_loss = torch.mean(weight_image_low_x * grad_illumination_low_x + weight_image_low_y * grad_illumination_low_y + weight_image_normal_x * grad_illumination_normal_x + weight_image_normal_y * grad_illumination_normal_y)
 
         return reconstruction_loss + self.gamma_rc * reflectance_consistency_loss + self.gamma_sm * illumination_smoothness_loss

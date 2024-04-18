@@ -30,7 +30,10 @@ if __name__ == '__main__':
     best_model.load_state_dict(torch.load('decomposition/simple_retinex_model/weights_last.pt', map_location=device))
     best_model = best_model.eval()
 
-    transform = transforms.Compose([transforms.ToTensor()])
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    ])
 
     test_image = "1.png"
     low_image = load_png_image(os.path.join('LOLdataset/test/low', test_image))
