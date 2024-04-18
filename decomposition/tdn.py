@@ -11,7 +11,6 @@ import os
 from tqdm import tqdm
 from torchvision import transforms
 
-
 from dataloader import RetinexDataset
 
 class TDNLoss(nn.Module):
@@ -55,7 +54,7 @@ class TDNLoss(nn.Module):
         weight_image_normal_x = torch.exp(-self.c * grad_image_normal_x)
         weight_image_normal_y = torch.exp(-self.c * grad_image_normal_y)
 
-        reconstruction_loss = F.l1_loss(reflectance_normal * illumination_normal_extended, image_normal) + self.alpha_rec * F.l1_loss(reflectance_low * illumination_low_extended, image_low) # TODO: add auxiliary cross product
+        reconstruction_loss = F.l1_loss(reflectance_normal * illumination_normal_extended, image_normal) + F.l1_loss(reflectance_low * illumination_low_extended, image_low) + F.l1_loss(reflectance_low * illumination_normal_extended, image_normal) + F.l1_loss(reflectance_normal * illumination_low_extedned, image_normal) 
         reflectance_consistency_loss = F.l1_loss(reflectance_normal, reflectance_low)
         illumination_smoothness_loss = torch.mean(weight_image_low_x * grad_illumination_low_x + weight_image_low_y * grad_illumination_low_y + weight_image_normal_x * grad_illumination_normal_x + weight_image_normal_y * grad_illumination_normal_y)
 
