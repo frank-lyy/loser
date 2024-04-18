@@ -2,14 +2,15 @@ import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
-from torchvision.io import read_image
-
-class RetinexDataset(Dataset):
+class RetinexDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
+        self.low_dir = os.path.join(self.root_dir, 'low')
+        self.high_dir = os.path.join(self.root_dir, 'high')
         self.transform = transform
-        self.img_list = [f for f in os.listdir(self.root_dir) if isfile(os.path.join(self.root_dir, f))]
+        self.img_list = [f for f in os.listdir(self.low_dir) if os.path.isfile(os.path.join(self.low_dir, f)) and not f.startswith('.')]
 
     def __len__(self):
         return len(self.img_list)
@@ -18,7 +19,18 @@ class RetinexDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        img_name = os.path.join(self.root_dir, self.img_list[idx])
+        img_low_name = os.path.join(self.low_dir, self.img_list[idx])
+        img_high_name = os.path.join(self.high_dir, self.img_list[idx])
+        print(img_low_name, img_high_name)
+
+        img_low = load_png_image(img_low_name)
+        img_high = load_png_image(img_high_name)
+
+        if self.transform:
+            img_low = self.transform(img_low)
+            img_high = self.transform(img_high)
+
+        return img_low, img_high
 
 def load_png_image(file_path):
     """
@@ -35,7 +47,7 @@ def load_png_image(file_path):
     
     # Convert image from BGR to RGB
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    
+
     return image
 
 def convert_to_hsv(image):
