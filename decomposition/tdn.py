@@ -16,7 +16,7 @@ from dataloader import RetinexDataset
 class TDNLoss(nn.Module):
     def __init__(self, device='cpu'):
         super(TDNLoss, self).__init__()
-        self.alpha_rec = 0.001
+        self.alpha_rec = 1
         self.gamma_rc = 0.1
         self.gamma_sm = 0.1
         self.c = 10 # TODO: have no idea what this is supposed to be
