@@ -16,9 +16,6 @@ def plot_batch_tensor(nrows, ncols, index, title, tensor):
     img = np.transpose(img, [1, 2, 0])
     img = img.astype(np.uint8)
 
-    if img.shape[2] == 1:
-        img = img[:, :, 0]
-
     plt.subplot(nrows, ncols, index)
     plt.title(title)
     plt.imshow(img)
@@ -55,9 +52,9 @@ if __name__ == '__main__':
     plot_batch_tensor(4, 2, 1, 'Low Image', low_image)
     plot_batch_tensor(4, 2, 2, 'Normal Image', normal_image)
     plot_batch_tensor(4, 2, 3, 'Low Reflectance', reflectance_low)
-    plot_batch_tensor(4, 2, 4, 'Low Illumination', illumination_low)
+    plot_batch_tensor(4, 2, 4, 'Low Illumination', illumination_low_extended)
     plot_batch_tensor(4, 2, 5, 'Normal Reflectance', reflectance_normal)
-    plot_batch_tensor(4, 2, 6, 'Normal Illumination', illumination_normal)
+    plot_batch_tensor(4, 2, 6, 'Normal Illumination', illumination_normal_extended)
     plot_batch_tensor(4, 2, 7, 'Reconstructed Low', reconstructed_low)
     plot_batch_tensor(4, 2, 8, 'Reconstructed Normal', reconstructed_normal)
 
