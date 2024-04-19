@@ -132,7 +132,7 @@ def train_model(device, model, dataloaders, criterion, optimizer, num_epochs, sa
 
 if __name__ == "__main__":
     # Constants
-    n_epochs = 5
+    n_epochs = 20
     lr = 0.0001
     batch_size = 16
     shuffle_datasets = True
