@@ -16,7 +16,7 @@ from dataloader import RetinexDataset
 class TDNLoss(nn.Module):
     def __init__(self, device='cpu'):
         super(TDNLoss, self).__init__()
-        self.alpha_rec = 0.3
+        self.alpha_rec = 0.001
         self.gamma_rc = 0.1
         self.gamma_sm = 0.1
         self.c = 10 # TODO: have no idea what this is supposed to be
@@ -30,9 +30,6 @@ class TDNLoss(nn.Module):
         gray_image_low = torch.unsqueeze(gray_image_low, dim=1)
         gray_image_normal = 0.299 * image_normal[:, 0, :, :] + 0.587 * image_normal[:, 1, :, :] + 0.114 * image_normal[:, 2, :, :]
         gray_image_normal = torch.unsqueeze(gray_image_normal, dim=1)
-
-        illumination_low_extended = torch.cat((illumination_low, illumination_low, illumination_low), dim=1)
-        illumination_normal_extended = torch.cat((illumination_normal, illumination_normal, illumination_normal), dim=1)
 
         # Calculate image gradients
         kernel_x = torch.FloatTensor([[0, 0], [-1, 1]]).view((1, 1, 2, 2))
@@ -54,7 +51,17 @@ class TDNLoss(nn.Module):
         weight_image_normal_x = torch.exp(-self.c * grad_image_normal_x)
         weight_image_normal_y = torch.exp(-self.c * grad_image_normal_y)
 
-        reconstruction_loss = F.l1_loss(reflectance_normal * illumination_normal_extended, image_normal) + self.alpha_rec * F.l1_loss(reflectance_low * illumination_low_extended, image_low) + F.l1_loss(reflectance_low * illumination_normal_extended, image_normal) + self.alpha_rec * F.l1_loss(reflectance_normal * illumination_low_extended, image_low) 
+        red_loss = (F.l1_loss(reflectance_normal[:, 0, :, :] * illumination_normal, image_normal[:, 0, :, :]) + 
+                    F.l1_loss(reflectance_low[:, 0, :, :] * illumination_low, image_low[:, 0, :, :]) + 
+                    self.alpha_rec * (F.l1_loss(reflectance_low[:, 0, :, :] * illumination_normal, image_normal[:, 0, :, :]) + F.l1_loss(reflectance_normal[:, 0, :, :] * illumination_low, image_low[:, 0, :, :]))
+        red_loss = (F.l1_loss(reflectance_normal[:, 1, :, :] * illumination_normal, image_normal[:, 1, :, :]) + 
+                    F.l1_loss(reflectance_low[:, 1, :, :] * illumination_low, image_low[:, 1, :, :]) + 
+                    self.alpha_rec * (F.l1_loss(reflectance_low[:, 1, :, :] * illumination_normal, image_normal[:, 1, :, :]) + F.l1_loss(reflectance_normal[:, 1, :, :] * illumination_low, image_low[:, 1, :, :]))
+        red_loss = (F.l1_loss(reflectance_normal[:, 2, :, :] * illumination_normal, image_normal[:, 2, :, :]) + 
+                    F.l1_loss(reflectance_low[:, 2, :, :] * illumination_low, image_low[:, 2, :, :]) + 
+                    self.alpha_rec * (F.l1_loss(reflectance_low[:, 2, :, :] * illumination_normal, image_normal[:, 2, :, :]) + F.l1_loss(reflectance_normal[:, 2, :, :] * illumination_low, image_low[:, 2, :, :]))
+
+        reconstruction_loss = red_loss + green_loss + blue_loss
         reflectance_consistency_loss = F.l1_loss(reflectance_low, reflectance_normal.detach())
         illumination_smoothness_loss = torch.mean(weight_image_low_x * grad_illumination_low_x + weight_image_low_y * grad_illumination_low_y + weight_image_normal_x * grad_illumination_normal_x + weight_image_normal_y * grad_illumination_normal_y)
 
