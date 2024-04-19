@@ -23,8 +23,8 @@ class RetinexDataset(torch.utils.data.Dataset):
         img_high_name = os.path.join(self.high_dir, self.img_list[idx])
         # print(img_low_name, img_high_name)
 
-        img_low = load_png_image(img_low_name)
-        img_high = load_png_image(img_high_name)
+        img_low = convert_to_hsv(load_png_image(img_low_name))
+        img_high = convert_to_hsv(load_png_image(img_high_name))
 
         if self.transform:
             img_low = self.transform(img_low)
