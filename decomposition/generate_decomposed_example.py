@@ -6,19 +6,27 @@ import cv2
 
 from torchvision import transforms
 
-from dataloader import load_png_image
+from dataloader import load_png_image, convert_to_hsv
 from tdn import RetinexModel
 
 def plot_batch_tensor(nrows, ncols, index, title, tensor):
+    transform = transforms.ToPILImage(mode='HSV')
     img = tensor[0, :, :, :]
-    img = img.detach().numpy()
-    img = img * 255.0
-    img = np.transpose(img, [1, 2, 0])
-    img = img.astype(np.uint8)
+    img = transform(img)
 
     plt.subplot(nrows, ncols, index)
     plt.title(title)
     plt.imshow(img)
+    plt.axis('off')
+
+def plot_batch_illumination_tensor(nrows, ncols, index, title, tensor):
+    img = tensor[0, 0, :, :]
+    img = img.detach().numpy()
+    img = img * 255
+
+    plt.subplot(nrows, ncols, index)
+    plt.title(title)
+    plt.imshow(img, cmap='gray')
     plt.axis('off')
 
 if __name__ == '__main__':
@@ -33,8 +41,8 @@ if __name__ == '__main__':
     ])
 
     test_image = "1.png"
-    low_image = load_png_image(os.path.join('LOLdataset/test/low', test_image))
-    normal_image = load_png_image(os.path.join('LOLdataset/test/high', test_image))
+    low_image = convert_to_hsv(load_png_image(os.path.join('LOLdataset/test/low', test_image)))
+    normal_image = convert_to_hsv(load_png_image(os.path.join('LOLdataset/test/high', test_image)))
 
     low_image = transform(low_image)
     low_image = torch.unsqueeze(low_image, 0)
@@ -52,9 +60,9 @@ if __name__ == '__main__':
     plot_batch_tensor(4, 2, 1, 'Low Image', low_image)
     plot_batch_tensor(4, 2, 2, 'Normal Image', normal_image)
     plot_batch_tensor(4, 2, 3, 'Low Reflectance', reflectance_low)
-    plot_batch_tensor(4, 2, 4, 'Low Illumination', illumination_low_extended)
+    plot_batch_illumination_tensor(4, 2, 4, 'Low Illumination', illumination_low)
     plot_batch_tensor(4, 2, 5, 'Normal Reflectance', reflectance_normal)
-    plot_batch_tensor(4, 2, 6, 'Normal Illumination', illumination_normal_extended)
+    plot_batch_illumination_tensor(4, 2, 6, 'Normal Illumination', illumination_normal)
     plot_batch_tensor(4, 2, 7, 'Reconstructed Low', reconstructed_low)
     plot_batch_tensor(4, 2, 8, 'Reconstructed Normal', reconstructed_normal)
 
