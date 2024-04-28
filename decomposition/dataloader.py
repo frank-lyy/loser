@@ -40,7 +40,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     # Example usage:
-    directory_path = 'LOLdataset/our485/low/'
+    directory_path = 'LOLdataset/train/low/'
     image_filename = '27.png'
     image = load_png_image(directory_path+image_filename)
     hsv_image = convert_to_hsv(image)
