@@ -137,12 +137,19 @@ class OriginalAlgorithm:
         return self.reflectance, self.illumination, self.noise
 
 if __name__ == "__main__":
+    if torch.cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
+
     directory_path = 'LOLdataset/train/low/'
     image_filename = '27.png'
     image = load_png_image(directory_path+image_filename)
     hsv_image = convert_to_hsv(image)
     _, _, v_channel = cv2.split(hsv_image)
+    v_image = torch.from_numpy(v_channel)
+    v_image = v_image.to(device)
 
-    optimizer = OriginalAlgorithm(v_channel)
+    optimizer = OriginalAlgorithm(v_image)
     weights = optimizer.optimize()
     print("Optimal weights:", weights)
