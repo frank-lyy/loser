@@ -148,7 +148,7 @@ if __name__ == "__main__":
     hsv_image = convert_to_hsv(image)
     _, _, v_channel = cv2.split(hsv_image)
     v_image = torch.from_numpy(v_channel)
-    v_image = v_image.to(device)
+    v_image = v_image.to(device).float()
 
     optimizer = OriginalAlgorithm(v_image)
     weights = optimizer.optimize()
