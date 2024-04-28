@@ -3,3 +3,4 @@
 
 # Ivy's GitIgnores:
 **/.DS_Store
+**/__pycache__
