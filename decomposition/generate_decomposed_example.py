@@ -56,14 +56,14 @@ if __name__ == '__main__':
     reconstructed_low = reflectance_low * illumination_low_extended
     reconstructed_normal = reflectance_normal * illumination_normal_extended
 
-    plt.figure(figsize=(16, 6))
-    plot_batch_tensor(4, 2, 1, 'Low Image', low_image)
-    plot_batch_tensor(4, 2, 2, 'Normal Image', normal_image)
-    plot_batch_tensor(4, 2, 3, 'Low Reflectance', reflectance_low)
-    plot_batch_illumination_tensor(4, 2, 4, 'Low Illumination', illumination_low)
-    plot_batch_tensor(4, 2, 5, 'Normal Reflectance', reflectance_normal)
-    plot_batch_illumination_tensor(4, 2, 6, 'Normal Illumination', illumination_normal)
-    plot_batch_tensor(4, 2, 7, 'Reconstructed Low', reconstructed_low)
-    plot_batch_tensor(4, 2, 8, 'Reconstructed Normal', reconstructed_normal)
+    plt.figure(figsize=(12, 6))
+    plot_batch_tensor(2, 4, 1, 'Low Image', low_image)
+    plot_batch_tensor(2, 4, 2, 'Low Reflectance', reflectance_low)
+    plot_batch_illumination_tensor(2, 4, 3, 'Low Illumination', illumination_low)
+    plot_batch_tensor(2, 4, 4, 'Reconstructed Low', reconstructed_low)
+    plot_batch_tensor(2, 4, 5, 'Normal Image', normal_image)
+    plot_batch_tensor(2, 4, 6, 'Normal Reflectance', reflectance_normal)
+    plot_batch_illumination_tensor(2, 4, 7, 'Normal Illumination', illumination_normal)
+    plot_batch_tensor(2, 4, 8, 'Reconstructed Normal', reconstructed_normal)
 
     plt.show()
