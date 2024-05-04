@@ -54,13 +54,6 @@ class TDNLoss(nn.Module):
         weight_image_normal_x = torch.exp(-self.c * grad_image_normal_x)
         weight_image_normal_y = torch.exp(-self.c * grad_image_normal_y)
 
-        # red_loss = F.l1_loss(reflectance_normal[:, 0:1, :, :] * illumination_normal, image_normal[:, 0:1, :, :]) + F.l1_loss(reflectance_low[:, 0:1, :, :] * illumination_low, image_low[:, 0:1, :, :]) 
-        # green_loss = F.l1_loss(reflectance_normal[:, 1:2, :, :] * illumination_normal, image_normal[:, 1:2, :, :]) + F.l1_loss(reflectance_low[:, 1:2, :, :] * illumination_low, image_low[:, 1:2, :, :])
-        # blue_loss = F.l1_loss(reflectance_normal[:, 2:3, :, :] * illumination_normal, image_normal[:, 2:3, :, :]) + F.l1_loss(reflectance_low[:, 2:3, :, :] * illumination_low, image_low[:, 2:3, :, :])
-        # red_loss = F.l1_loss(reflectance_normal[:, 0:1, :, :] * illumination_normal, image_normal[:, 0:1, :, :]) + F.l1_loss(reflectance_low[:, 0:1, :, :] * illumination_low, image_low[:, 0:1, :, :]) + self.alpha_rec * (F.l1_loss(reflectance_low[:, 0:1, :, :] * illumination_normal, image_normal[:, 0:1, :, :]) + F.l1_loss(reflectance_normal[:, 0:1, :, :] * illumination_low, image_low[:, 0:1, :, :]))
-        # green_loss = F.l1_loss(reflectance_normal[:, 1:2, :, :] * illumination_normal, image_normal[:, 1:2, :, :]) + F.l1_loss(reflectance_low[:, 1:2, :, :] * illumination_low, image_low[:, 1:2, :, :]) + self.alpha_rec * (F.l1_loss(reflectance_low[:, 1:2, :, :] * illumination_normal, image_normal[:, 1:2, :, :]) + F.l1_loss(reflectance_normal[:, 1:2, :, :] * illumination_low, image_low[:, 1:2, :, :]))
-        # blue_loss = F.l1_loss(reflectance_normal[:, 2:3, :, :] * illumination_normal, image_normal[:, 2:3, :, :]) + F.l1_loss(reflectance_low[:, 2:3, :, :] * illumination_low, image_low[:, 2:3, :, :]) + self.alpha_rec * (F.l1_loss(reflectance_low[:, 2:3, :, :] * illumination_normal, image_normal[:, 2:3, :, :]) + F.l1_loss(reflectance_normal[:, 2:3, :, :] * illumination_low, image_low[:, 2:3, :, :]))
-
         reconstruction_loss = F.l1_loss(reflectance_normal * illumination_normal_extended, image_normal) + self.alpha_rec * F.l1_loss(reflectance_low * illumination_low_extended, image_low) + F.l1_loss(reflectance_low * illumination_normal_extended, image_normal) + self.alpha_rec * F.l1_loss(reflectance_normal * illumination_low_extended, image_low)
         reflectance_consistency_loss = F.l1_loss(reflectance_low, reflectance_normal.detach())
         illumination_smoothness_loss = torch.mean(weight_image_low_x * grad_illumination_low_x + weight_image_low_y * grad_illumination_low_y + weight_image_normal_x * grad_illumination_normal_x + weight_image_normal_y * grad_illumination_normal_y)
