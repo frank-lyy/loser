@@ -57,8 +57,6 @@ class IDAModel(nn.Module):
         return adjusted_illumination
 
 def train_model(device, retinex_model, ida_model, dataloaders, criterion, optimizer, num_epochs, save_dir=None):
-    retinex_model.eval()
-
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch + 1, num_epochs))
         print('-' * 10)
@@ -94,21 +92,23 @@ def train_model(device, retinex_model, ida_model, dataloaders, criterion, optimi
 
     # Save the model
     if save_dir:
-        torch.save(model.state_dict(), os.path.join(save_dir, 'weights_last.pt'))
+        torch.save(ida_model.state_dict(), os.path.join(save_dir, 'weights_last.pt'))
 
-    return model
+    return ida_model
 
 if __name__ == "__main__":
     # Constants
     n_epochs = 20
     lr = 0.0001
-    batch_size = 16
+    batch_size = 4
     shuffle_datasets = True
     save_dir = "dga/illumination_adjustment"
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     retinex_model = RetinexModel()
     retinex_model.load_state_dict(torch.load('decomposition/simple_retinex_model/weights_last.pt', map_location=device))
+    retinex_model = retinex_model.to(device)
+    retinex_model.eval()
     ida_model = IDAModel()
     ida_model = ida_model.to(device)
     optim = torch.optim.Adam(ida_model.parameters(), lr=lr)
