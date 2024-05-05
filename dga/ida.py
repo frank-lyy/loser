@@ -20,7 +20,7 @@ from tdn import RetinexModel
 class IDALoss(nn.Module):
     def __init__(self, device='cpu'):
         super(IDALoss, self).__init__()
-        self.alpha = 0.5
+        self.alpha = 1
         self.device = device
 
     def forward(self, inputs, targets):
