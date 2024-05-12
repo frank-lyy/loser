@@ -65,6 +65,27 @@ def convert_to_hsv(image):
     
     return hsv_image
 
+def crop_image(image, crop_size):
+    """
+    Crop an image to a specified size.
+
+    Parameters:
+    image (np.ndarray): Input image as a numpy array.
+    crop_size (int): Desired crop size.
+
+    Returns:
+    np.ndarray: Cropped image as a numpy array.
+    """
+    # Crop image to crop_size
+    center_x, center_y = image.shape[0]//2, image.shape[1]//2
+    cropped_image = image[center_x-crop_size[0]//2:center_x+crop_size[0]//2,
+                          center_y-crop_size[1]//2:center_y+crop_size[1]//2+1]
+
+    return cropped_image
+
+def hsv_to_color(h, s, v):
+    return cv2.cvtColor(cv2.merge([h, s, v]), cv2.COLOR_HSV2RGB)
+
 if __name__ == "__main__":
     # Display the original and HSV images
     # Example usage:
