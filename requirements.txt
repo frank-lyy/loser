@@ -5,3 +5,4 @@ matplotlib==3.8.4
 opencv-python==4.9.0.80
 torchvision==0.17.2
 tqdm==4.66.2
+pandas==2.2.2
