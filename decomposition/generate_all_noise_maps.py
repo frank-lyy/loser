@@ -16,11 +16,15 @@ if __name__ == "__main__":
 
     save_directory = 'decomposition/robust_noise'
 
-    for phase in ['train', 'val']:
+    for phase in ['val']:
       directory = os.path.join('LOLdataset', phase)
       directory = os.path.join(directory, 'low')
 
-      img_list = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f)) and not f.startswith('.')]
+      already_existing = [f for f in os.listdir(save_directory) if os.path.isfile(os.path.join(save_directory, f)) and not f.startswith('.')]
+      already_existing.append('508.png')
+      already_existing.append('523.png')
+      img_list = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f)) and not f.startswith('.') and not f in already_existing]
+      print(img_list)
       
       for img in tqdm(img_list):
         image_low = load_png_image(os.path.join(directory, img))
@@ -36,11 +40,8 @@ if __name__ == "__main__":
         low_noise = low_noise.detach().numpy()
 
         # print("finished getting noise")
-        print(low_noise)
-        print(img)
     
         save_path = os.path.join(save_directory, img)
         torch.save(low_noise, save_path)
 
         # print("finished one image")
-        break
