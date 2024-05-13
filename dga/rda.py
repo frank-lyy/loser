@@ -154,6 +154,8 @@ def train_model(device, retinex_model, rda_forward_model, rda_reverse_model, dat
                 noise = noise.to(device)
                 targets = targets.to(device)
 
+                # print(noise)
+
                 _, _, reflectance_normal, _ = retinex_model((inputs, targets))
                 noisy_reflectance_normal = rda_forward_model.diffuse(reflectance_normal, noise)
 
