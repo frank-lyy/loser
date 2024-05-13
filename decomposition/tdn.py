@@ -126,7 +126,7 @@ def train_model(device, model, dataloaders, criterion, optimizer, num_epochs, sa
 
     # Save the model
     if save_dir:
-        torch.save(model.state_dict(), os.path.join(save_dir, 'weights_last.pt'))
+        torch.save(model.state_dict(), os.path.join(save_dir, 'weights_test.pt'))
 
     return model
 

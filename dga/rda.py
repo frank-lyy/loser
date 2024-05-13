@@ -17,9 +17,11 @@ import cv2
 from torchvision import transforms
 from tqdm import tqdm
 
-from dataloader import RetinexDataset, load_png_image, convert_to_hsv
+from dataloader import NoiseDataset, load_png_image, convert_to_hsv
 from tdn import RetinexModel
 from robust_decomposition import RobustRetinexModel
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
 class ReverseLoss(nn.Module):
     def __init__(self, device='cpu'):
@@ -49,13 +51,13 @@ class ForwardDiffusionModel(nn.Module):
         xt = inputs
         for t in range(steps):
             sample = self.sample_from_distribution(distribution, xt.shape)
-            xt = np.sqrt(1 - beta) * xt + np.sqrt(beta) * sample
+            xt = np.sqrt(1 - beta) * xt + np.sqrt(beta) * sample.to(device)
 
         return xt
 
     def sample_from_distribution(self, distribution, sample_shape):
         distribution = torch.flatten(distribution)
-        sample = np.random.choice(distribution.detach().numpy(), size=sample_shape, replace=True)
+        sample = np.random.choice(distribution.cpu().detach().numpy(), size=sample_shape, replace=True)
         return torch.from_numpy(sample)
 
 class ReverseDiffusionModel(nn.Module):
@@ -132,10 +134,11 @@ class ReverseDiffusionModel(nn.Module):
 
         return decode_layer4
 
-def train_model(device, retinex_model, robust_retinex_model, rda_forward_model, rda_reverse_model, dataloaders, criterion, optimizer, num_epochs, save_dir=None):
+def train_model(device, retinex_model, rda_forward_model, rda_reverse_model, dataloaders, criterion, optimizer, num_epochs, save_dir=None):
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch + 1, num_epochs))
         print('-' * 10)
+        
 
         for phase in ['train', 'val']:
             if phase == 'train':
@@ -146,13 +149,13 @@ def train_model(device, retinex_model, robust_retinex_model, rda_forward_model, 
             running_loss = 0.0
 
             # Iterate over data, using TQDM for progress tracking
-            for inputs , targets in tqdm(dataloaders[phase]):
+            for inputs, noise, targets in tqdm(dataloaders[phase]):
                 inputs = inputs.to(device)
+                noise = noise.to(device)
                 targets = targets.to(device)
 
-                reflectance_low, illumination_low, reflectance_normal, illumination_normal = retinex_model((inputs, targets))
-                noise_map = robust_retinex_model(reflectance_normal) 
-                noisy_reflectance_normal = rda_forward_model.diffuse(reflectance_normal, noise_map)
+                _, _, reflectance_normal, _ = retinex_model((inputs, targets))
+                noisy_reflectance_normal = rda_forward_model.diffuse(reflectance_normal, noise)
 
                 optimizer.zero_grad()
 
@@ -166,7 +169,7 @@ def train_model(device, retinex_model, robust_retinex_model, rda_forward_model, 
 
                 running_loss += loss.item() * inputs.size(0)
 
-            epoch_loss = runing_loss / len(dataloaders[phase].cataset)
+            epoch_loss = running_loss / len(dataloaders[phase].dataset)
             print('{} Loss: {:.4f}'.format(phase, epoch_loss))
 
     if save_dir:
@@ -177,6 +180,10 @@ def train_model(device, retinex_model, robust_retinex_model, rda_forward_model, 
 
 if __name__ == "__main__":
     # Constants
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    # print(r, a)
+
     n_epochs = 20
     lr = 0.0001
     batch_size = 4
@@ -184,13 +191,12 @@ if __name__ == "__main__":
     save_dir = "dga/reflectance_adjustment"
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    torch.cuda.empty_cache()
 
     retinex_model = RetinexModel()
     retinex_model.load_state_dict(torch.load('decomposition/simple_retinex_model/weights_last.pt', map_location=device))
     retinex_model = retinex_model.to(device)
     retinex_model.eval()
-
-    robust_retinex_model = RobustRetinexModel()
 
     rda_forward_model = ForwardDiffusionModel()
 
@@ -204,10 +210,18 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
 
-    train_dataset = RetinexDataset('LOLdataset/train', transform=transform)
-    val_dataset = RetinexDataset('LOLdataset/val', transform=transform)
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    # print(r, a)
+
+    train_dataset = NoiseDataset('LOLdataset/train', transform=transform)
+    val_dataset = NoiseDataset('LOLdataset/val', transform=transform)
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle_datasets)
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=shuffle_datasets)
     dataloaders = { 'train': train_dataloader, 'val': val_dataloader }
 
-    model = train_model(device, retinex_model, robust_retinex_model, rda_forward_model, rda_reverse_model, dataloaders, criterion, optim, n_epochs, save_dir)
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    # print(r, a)
+
+    model = train_model(device, retinex_model, rda_forward_model, rda_reverse_model, dataloaders, criterion, optim, n_epochs, save_dir)
