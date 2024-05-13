@@ -34,23 +34,28 @@ class ReverseLoss(nn.Module):
 
         return loss
 
-class ForwardDiffusionModel():
+class ForwardDiffusionModel(nn.Module):
     def __init__(self):
         super().__init__()
 
+    def forward(self, inputs):
+        reflectance_normal, distribution = inputs
+        outputs = []
+        for i in range(distribution.shape[0]):
+            outputs.append(self.diffuse(reflectance_normal[i], distribution[i]))
+        return torch.stack(outputs)
+
     def diffuse(self, inputs, distribution, steps=250, beta=0.02):
-        samples = [inputs]
         xt = inputs
         for t in range(steps):
             sample = self.sample_from_distribution(distribution, xt.shape)
             xt = np.sqrt(1 - beta) * xt + np.sqrt(beta) * sample
-            samples.append(xt)
 
-        return samples
+        return xt
 
     def sample_from_distribution(self, distribution, sample_shape):
         distribution = torch.flatten(distribution)
-        sample = np.random.choice(distribution, size=sample_shape, replace=True)
+        sample = np.random.choice(distribution.detach().numpy(), size=sample_shape, replace=True)
         return torch.from_numpy(sample)
 
 class ReverseDiffusionModel(nn.Module):
@@ -81,39 +86,27 @@ class ReverseDiffusionModel(nn.Module):
                                             nn.ReLU(),
                                             nn.Conv2d(512, 512, self.kernel_size, padding=1),
                                             nn.ReLU())
-        self.encoder_pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        self.encoder_layer5 = nn.Sequential(nn.Conv2d(512, 1024, self.kernel_size, padding=1),
-                                            nn.ReLU(),
-                                            nn.Conv2d(1024, 1024, self.kernel_size, padding=1),
-                                            nn.ReLU())
 
         # Decoder
-        self.decoder_conv1 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
-        self.decoder_layer1 = nn.Sequential(nn.Conv2d(1024, 512, self.kernel_size, padding=1),
-                                            nn.ReLU(),
-                                            nn.Conv2d(512, 512, self.kernel_size, padding=1),
-                                            nn.ReLU())
-
-        self.decoder_conv2 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
-        self.decoder_layer2 = nn.Sequential(nn.Conv2d(512, 256, self.kernel_size, padding=1),
+        self.decoder_conv1 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
+        self.decoder_layer1 = nn.Sequential(nn.Conv2d(512, 256, self.kernel_size, padding=1),
                                             nn.ReLU(),
                                             nn.Conv2d(256, 256, self.kernel_size, padding=1),
                                             nn.ReLU())
 
-        self.decoder_conv3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
-        self.decoder_layer3 = nn.Sequential(nn.Conv2d(256, 128, self.kernel_size, padding=1),
+        self.decoder_conv2 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.decoder_layer2 = nn.Sequential(nn.Conv2d(256, 128, self.kernel_size, padding=1),
                                             nn.ReLU(),
                                             nn.Conv2d(128, 128, self.kernel_size, padding=1),
                                             nn.ReLU())
 
-        self.decoder_conv4 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
-        self.decoder_layer4 = nn.Sequential(nn.Conv2d(128, 64, self.kernel_size, padding=1),
+        self.decoder_conv3 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.decoder_layer3 = nn.Sequential(nn.Conv2d(128, 64, self.kernel_size, padding=1),
                                             nn.ReLU(),
                                             nn.Conv2d(64, 64, self.kernel_size, padding=1),
                                             nn.ReLU())
 
-        self.decoder_layer5 = nn.Conv2d(64, 3, kernel_size=1)
+        self.decoder_layer4 = nn.Conv2d(64, 3, kernel_size=1)
 
     def forward(self, inputs):
         # Encoder
@@ -124,25 +117,20 @@ class ReverseDiffusionModel(nn.Module):
         encode_layer3 = self.encoder_layer3(encode_pool2)
         encode_pool3 = self.encoder_pool3(encode_layer3)
         encode_layer4 = self.encoder_layer4(encode_pool3)
-        encode_pool4 = self.encoder_pool4(encode_layer4)
-        encode_layer5 = self.encoder_layer5(encode_pool4)
 
         # Decoder
-        decode_conv1 = self.decoder_conv1(encode_layer5)
-        decode_up1 = torch.cat([decode_conv1, encode_layer4], dim=1)
+        decode_conv1 = self.decoder_conv1(encode_layer4)
+        decode_up1 = torch.cat([decode_conv1, encode_layer3], dim=1)
         decode_layer1 = self.decoder_layer1(decode_up1)
         decode_conv2 = self.decoder_conv2(decode_layer1)
-        decode_up2 = torch.cat([decode_conv2, encode_layer3], dim=1)
+        decode_up2 = torch.cat([decode_conv2, encode_layer2], dim=1)
         decode_layer2 = self.decoder_layer2(decode_up2)
         decode_conv3 = self.decoder_conv3(decode_layer2)
-        decode_up3 = torch.cat([decode_conv3, encode_layer2], dim=1)
+        decode_up3 = torch.cat([decode_conv3, encode_layer1], dim=1)
         decode_layer3 = self.decoder_layer3(decode_up3)
-        decode_conv4 = self.decoder_conv4(decode_layer3)
-        decode_up4 = torch.cat([decode_conv4, encode_layer1], dim=1)
-        decode_layer4 = self.decoder_layer4(decode_up4)
-        decode_layer5 = self.decoder_layer5(decode_layer4)
+        decode_layer4 = self.decoder_layer4(decode_layer3)
 
-        return decode_layer5
+        return decode_layer4
 
 def train_model(device, retinex_model, robust_retinex_model, rda_forward_model, rda_reverse_model, dataloaders, criterion, optimizer, num_epochs, save_dir=None):
     for epoch in range(num_epochs):
@@ -155,32 +143,31 @@ def train_model(device, retinex_model, robust_retinex_model, rda_forward_model, 
             else:
                 rda_reverse_model.eval()
 
-        # Iterate over data, using TQDM for progress tracking
-        for inputs , targets in tqdm(dataloaders[phase]):
-            inputs = inputs.to(device)
-            targets = targets.to(device)
+            running_loss = 0.0
 
-            reflectance_low, illumination_low, reflectance_normal, illumination_normal = retinex_model((inputs, targets))
-            noise_map = robust_retinex_model(reflectance_normal) 
-            print(reflectance_normal.shape)
-            print(noise_map.shape)
-            noisy_reflectance_normal = rda_forward_model.diffuse(reflectance_normal, noise_map)
+            # Iterate over data, using TQDM for progress tracking
+            for inputs , targets in tqdm(dataloaders[phase]):
+                inputs = inputs.to(device)
+                targets = targets.to(device)
 
-            optimizer.zero_grad()
+                reflectance_low, illumination_low, reflectance_normal, illumination_normal = retinex_model((inputs, targets))
+                noise_map = robust_retinex_model(reflectance_normal) 
+                noisy_reflectance_normal = rda_forward_model.diffuse(reflectance_normal, noise_map)
 
-            with torch.set_grad_enabled(phase == 'train'):
-                outputs = rda_reverse_model(noisy_reflectance_normal)
-                loss = criterion(outputs, reflectance_normal)
+                optimizer.zero_grad()
 
-                if phase == 'train':
-                    loss.backward()
-                    optimizer.step()
+                with torch.set_grad_enabled(phase == 'train'):
+                    outputs = rda_reverse_model(noisy_reflectance_normal)
+                    loss = criterion(outputs, reflectance_normal)
 
-            running_loss += loss.item() * inputs.size(0)
-            raise Exception("meow")
+                    if phase == 'train':
+                        loss.backward()
+                        optimizer.step()
 
-        epoch_loss = runing_loss / len(dataloaders[phase].cataset)
-        print('{} Loss: {:.4f}'.format(phase, epoch_loss))
+                running_loss += loss.item() * inputs.size(0)
+
+            epoch_loss = runing_loss / len(dataloaders[phase].cataset)
+            print('{} Loss: {:.4f}'.format(phase, epoch_loss))
 
     if save_dir:
         torch.save(rda_reverse_model.state_dict(), os.path.join(save_dir, 'weights_last.pt'))
@@ -192,7 +179,7 @@ if __name__ == "__main__":
     # Constants
     n_epochs = 20
     lr = 0.0001
-    batch_size = 4
+    batch_size = 1
     shuffle_datasets = True
     save_dir = "dga/reflectance_adjustment"
 
