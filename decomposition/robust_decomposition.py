@@ -237,8 +237,6 @@ def get_noise(low_image):
             optimizer = OriginalAlgorithm(patch)
             _, _, patch_noise = optimizer.optimize()
             noise[upper:upper+patch_height, left:left+patch_width] = patch_noise
-            break
-        break
     
     print(f"Obtaining noise took {time.time()-start} seconds.")
     return noise

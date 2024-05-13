@@ -179,7 +179,7 @@ if __name__ == "__main__":
     # Constants
     n_epochs = 20
     lr = 0.0001
-    batch_size = 1
+    batch_size = 4
     shuffle_datasets = True
     save_dir = "dga/reflectance_adjustment"
 
