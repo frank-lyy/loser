@@ -36,8 +36,11 @@ if __name__ == "__main__":
         low_noise = low_noise.detach().numpy()
 
         # print("finished getting noise")
-  
+        print(low_noise)
+        print(img)
+    
         save_path = os.path.join(save_directory, img)
-        cv2.imwrite(save_path, low_noise)
+        torch.save(low_noise, save_path)
 
         # print("finished one image")
+        break
