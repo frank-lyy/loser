@@ -34,6 +34,57 @@ def plot_batch_illumination_tensor(nrows, ncols, index, title, tensor):
     plt.imshow(img, cmap='gray')
     plt.axis('off')
 
+def reconstruct_adjusted_reflectance():
+    """
+    Generate the reconstructed image (using adjusted reflectance) for all images in the test dataset
+    """
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    best_model = RetinexModel()
+    best_model.load_state_dict(torch.load('decomposition/simple_retinex_model/weights_last.pt', map_location=device))
+    best_model = best_model.eval()
+    reflectance_model = ReverseDiffusionModel()
+    reflectance_model.load_state_dict(torch.load('dga/reflectance_adjustment/weights_0.pt', map_location=device))
+    reflectance_model = reflectance_model.eval()
+    illumination_model = IDAModel()
+    illumination_model.load_state_dict(torch.load('dga/illumination_adjustment/weights_last.pt', map_location=device))
+    illumination_model = illumination_model.eval()
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    ])
+
+    # List all files in the folder
+    files = os.listdir('LOLdataset/train/low')
+    # Filter for image files (assuming common image extensions like .jpg, .png, etc.)
+    image_files = [file for file in files if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif'))]
+    # Iterate over the image files
+    for image_file in image_files:
+        test_image = image_file
+        low_image = convert_to_hsv(load_png_image(os.path.join('LOLdataset/train/low', test_image)))
+        normal_image = convert_to_hsv(load_png_image(os.path.join('LOLdataset/train/high', test_image)))
+
+        low_image = transform(low_image)
+        low_image = torch.unsqueeze(low_image, 0)
+        normal_image = transform(normal_image)
+        normal_image = torch.unsqueeze(normal_image, 0)
+
+        reflectance_low, illumination_low, reflectance_normal, illumination_normal = best_model((low_image, normal_image)) 
+        adjusted_reflectance = reflectance_model(reflectance_low)
+        adjusted_illumination = illumination_model((reflectance_low, illumination_low))
+
+        illumination_low_extended = torch.cat((illumination_low, illumination_low, illumination_low), dim=1)
+        illumination_normal_extended = torch.cat((illumination_normal, illumination_normal, illumination_normal), dim=1)
+        adjusted_illumination_extended = torch.cat((adjusted_illumination, adjusted_illumination, adjusted_illumination), dim=1)
+        reconstructed_low = reflectance_low * illumination_low_extended
+        reconstructed_normal = reflectance_normal * illumination_normal_extended
+        reconstructed_adjusted = adjusted_reflectance * adjusted_illumination_extended
+        
+        image_filename = os.path.join('dga/reconstructed_reflectance_adjusted', image_file)
+        torch.save(reconstructed_adjusted, image_filename)
+
+
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     best_model = RetinexModel()
