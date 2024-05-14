@@ -3,6 +3,7 @@ from dataloader import *
 import torch
 import matplotlib.pyplot as plt
 import time
+import torch.nn as nn
 
 class OriginalAlgorithm:
     def __init__(self, image):
@@ -240,6 +241,15 @@ def get_noise(low_image):
     print(f"Obtaining noise took {time.time()-start} seconds.")
     return noise
 
+class RobustRetinexModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, inputs):
+        noise_maps = []
+        for i in range(inputs.shape[0]):
+            noise_maps.append(get_noise(inputs[i, 2, :, :]))
+        return torch.stack(noise_maps)
 
 if __name__ == "__main__":
     if torch.cuda.is_available():

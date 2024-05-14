@@ -32,6 +32,38 @@ class RetinexDataset(torch.utils.data.Dataset):
 
         return img_low, img_high
 
+class NoiseDataset(torch.utils.data.Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.low_dir = os.path.join(self.root_dir, 'low')
+        self.high_dir = os.path.join(self.root_dir, 'high')
+        self.noise_dir = 'decomposition/robust_noise' 
+        self.transform = transform
+        self.low_list = [f for f in os.listdir(self.low_dir) if os.path.isfile(os.path.join(self.low_dir, f)) and not f.startswith('.')]
+        self.img_list = [f for f in os.listdir(self.noise_dir) if os.path.isfile(os.path.join(self.noise_dir, f)) and not f.startswith('.') and f in self.low_list]
+
+    def __len__(self):
+        return len(self.img_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_low_name = os.path.join(self.low_dir, self.img_list[idx])
+        img_high_name = os.path.join(self.high_dir, self.img_list[idx])
+        img_noise_name = os.path.join(self.noise_dir, self.img_list[idx])
+        # print(img_low_name, img_high_name)
+
+        img_low = convert_to_hsv(load_png_image(img_low_name))
+        img_high = convert_to_hsv(load_png_image(img_high_name))
+        img_noise = torch.load(img_noise_name)
+
+        if self.transform:
+            img_low = self.transform(img_low)
+            img_high = self.transform(img_high)
+
+        return img_low, img_noise, img_high
+
 def load_png_image(file_path):
     """
     Load a .png image from file path.
